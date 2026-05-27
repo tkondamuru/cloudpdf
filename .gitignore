@@ -1,0 +1,21 @@
+# Build directories
+[Bb]in/
+[Oo]bj/
+
+# Artifacts
+artifacts/
+
+# Visual Studio and VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# User secrets and local config overrides
+appsettings.Development.json

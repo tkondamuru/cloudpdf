@@ -1,0 +1,10 @@
+# Exclude build output and packages from Docker context
+bin/
+obj/
+artifacts/
+.git/
+.vs/
+.vscode/
+*.zip
+*.bat
+*.md
