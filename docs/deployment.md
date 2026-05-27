@@ -98,3 +98,39 @@ az containerapp create \
 ```
 
 Once the command finishes, it will output the public URL (FQDN) of your application. You can load this URL, upload HTML files, and see the PDF downloads start in real-time.
+
+---
+
+## Part 3: CI/CD Deployment via GitHub Actions
+
+Instead of manually zipping and uploading code, we can automate the build and deployment process using **GitHub Actions** triggered by merging pull requests into the `dev` branch.
+
+### 1. Create an Azure Service Principal
+To authorize GitHub to interact with your Azure resources, you need to create a Service Principal. Run this in Azure Cloud Shell:
+
+```bash
+# Retrieve your Subscription ID
+SUBSCRIPTION_ID=$(az account show --query id --output tsv)
+
+# Create the Service Principal scoped to your Resource Group
+az ad sp create-for-rbac \
+  --name "cloudpdf-github-actions" \
+  --role contributor \
+  --scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/pdf-processor-rg \
+  --sdk-auth
+```
+Copy the entire **JSON output block** returned by this command.
+
+### 2. Configure GitHub Secrets
+1. Go to your repository on GitHub.
+2. Navigate to **Settings** -> **Secrets and variables** -> **Actions**.
+3. Click **New repository secret**.
+4. Set the name to: `AZURE_CREDENTIALS`
+5. Paste the copied JSON block into the secret value field.
+6. Click **Add secret**.
+
+### 3. Pipeline Trigger and Versioning
+The workflow is defined at `.github/workflows/deploy-dev.yml`.
+* **Trigger**: Automatically runs when a Pull Request targeting the `dev` branch is **closed and merged**.
+* **Versioning**: The build version uses the **Short Git Commit SHA** (e.g. `sha-9dfb4da`) as the image tag. This ensures that every deployment is uniquely identifiable and rollback is simple.
+
