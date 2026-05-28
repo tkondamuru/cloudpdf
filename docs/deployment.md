@@ -112,7 +112,8 @@ To authorize GitHub to interact with your Azure resources, you need to create a 
 # Retrieve your Subscription ID
 SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 
-# Create the Service Principal scoped to your Resource Group
+# Create the Service Principal scoped to your Resource Group.
+# This grants the 'Contributor' role, allowing the runner to create new resources and update/delete existing ones, restricted exclusively to the 'pdf-processor-rg' resource group.
 az ad sp create-for-rbac \
   --name "cloudpdf-github-actions" \
   --role contributor \
