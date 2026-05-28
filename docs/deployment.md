@@ -151,16 +151,38 @@ az containerapp revision list \
 This will print a table showing revision names like `cloudpdf-service--t0528050455` and `cloudpdf-service--0000001`, their status, and current traffic allocation.
 
 ### 2. Switch Traffic Between Revisions (Instant Rollback)
-To roll back (switch traffic) from your active container (e.g. `cloudpdf-service--t0528050455`) back to a working older container (e.g. `cloudpdf-service--0000001`), run:
+
+How you rollback depends on your Container App's **Revision Mode** (Single vs. Multiple).
+
+#### **Option A: If in Single Revision Mode (Default)**
+In Single Revision Mode, only one container configuration can be active at a time. To rollback to a previous version, you update the Container App's image target back to your older working tag (or specific cryptographic Digest). This spins up a new revision running the older code and automatically shuts down the buggy one:
 
 ```bash
-# Direct 100% of network traffic back to your older revision
-az containerapp ingress traffic set \
+# Roll back by pointing the Container App back to the previous tag or digest
+az containerapp update \
   --name cloudpdf-service \
   --resource-group pdf-processor-rg \
-  --revision-weight "cloudpdf-service--0000001=100"
+  --image sat0049pdfregistry.azurecr.io/cloudpdf-processor:v1
 ```
 
-This updates the ingress controller in Azure immediately, redirecting traffic without needing to rebuild or restart the older revision.
+#### **Option B: If in Multiple Revision Mode**
+If you want to keep multiple historical container revisions alive and route traffic between them instantly without creating new deployments:
+
+1. **Set the App Revision Mode to Multiple**:
+   ```bash
+   az containerapp revision set-mode \
+     --name cloudpdf-service \
+     --resource-group pdf-processor-rg \
+     --mode multiple
+   ```
+
+2. **Direct 100% of network traffic back to your older revision name**:
+   ```bash
+   az containerapp ingress traffic set \
+     --name cloudpdf-service \
+     --resource-group pdf-processor-rg \
+     --revision-weight "cloudpdf-service--0000001=100"
+   ```
+
 
 
