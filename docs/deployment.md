@@ -134,3 +134,33 @@ The workflow is defined at `.github/workflows/deploy-dev.yml`.
 * **Trigger**: Automatically runs when a Pull Request targeting the `dev` branch is **closed and merged**.
 * **Versioning**: The build version uses the **Short Git Commit SHA** (e.g. `sha-9dfb4da`) as the image tag. This ensures that every deployment is uniquely identifiable and rollback is simple.
 
+---
+
+## Part 4: Managing and Rolling Back Revisions
+
+Every time a deployment occurs (whether via Cloud Shell or GitHub Actions), Azure Container Apps creates a **Revision** (an immutable version snapshot). We can list these historical revisions and switch network traffic between them instantly.
+
+### 1. List All Active and Inactive Revisions
+Run this in Cloud Shell to see the names of all historical configurations:
+```bash
+az containerapp revision list \
+  --name cloudpdf-service \
+  --resource-group pdf-processor-rg \
+  --output table
+```
+This will print a table showing revision names like `cloudpdf-service--t0528050455` and `cloudpdf-service--0000001`, their status, and current traffic allocation.
+
+### 2. Switch Traffic Between Revisions (Instant Rollback)
+To roll back (switch traffic) from your active container (e.g. `cloudpdf-service--t0528050455`) back to a working older container (e.g. `cloudpdf-service--0000001`), run:
+
+```bash
+# Direct 100% of network traffic back to your older revision
+az containerapp ingress traffic set \
+  --name cloudpdf-service \
+  --resource-group pdf-processor-rg \
+  --revision-weight "cloudpdf-service--0000001=100"
+```
+
+This updates the ingress controller in Azure immediately, redirecting traffic without needing to rebuild or restart the older revision.
+
+
