@@ -323,6 +323,103 @@ Azure Container Apps registers this specific image URL in the App's **Revision**
    * Rollbacks are clean and easy.
    * Azure Container Apps instantly detects the new version and pulls it without cache issues.
 
+---
+
+### **Q12: If an Azure account has access to multiple subscriptions, how do we determine which Subscription ID to target when configuring the Service Principal, and how do we ensure the Azure CLI is set to the correct active subscription?**
+
+**Answer:**
+
+You must select and target the specific Azure subscription **that hosts the Resource Group (`pdf-processor-rg`)** containing your project infrastructure (Container Registry, Environment, and Container App). 
+
+If you create the Service Principal under the wrong subscription, the GitHub Actions deployment will fail with a "Resource Group Not Found" or "Authorization Failed" error.
+
+#### **How to find and switch to the correct subscription in Azure Cloud Shell:**
+
+1. **List all subscriptions you have access to**:
+   ```bash
+   az account list --output table
+   ```
+   This will display a table containing the `Name`, `SubscriptionId`, and whether it is currently active (`IsDefault`).
+
+2. **Select and switch the active subscription**:
+   Identify the subscription name or ID where your resources are located, and set it as the default:
+   ```bash
+   # Switch using the subscription name
+   az account set --subscription "My-Project-Subscription"
+
+   # OR switch using the Subscription ID directly
+   az account set --subscription "12345678-abcd-1234-abcd-1234567890ab"
+   ```
+
+3. **Verify the change**:
+   Run the show command to confirm that the active subscription has updated:
+   ```bash
+   az account show --query "{Name:name, ID:id}"
+   ```
+
+Once you have verified that the active subscription context is correct, you can run the Service Principal creation command. The `az account show --query id` variable will automatically capture the correct ID, and the Service Principal will be granted permissions on the correct subscription.
+
+---
+
+### **Q13: In the Azure Portal, what is the quickest way to check what image versions/tags a container has run under, and how do we switch (roll back) between different versions using the Portal vs the Azure CLI?**
+
+**Answer:**
+
+In Azure Container Apps, every deployment, image change, or configuration update creates a **Revision** (an immutable historical snapshot). Revisions are how we inspect past versions and switch between them.
+
+#### **1. How to check past versions (Tags/Images)**
+
+* **Using the Azure Portal (Visual UI)**:
+  1. Open your **Container App** in the portal.
+  2. In the left-hand menu, under the **Application** section, click on **Revision management**.
+  3. You will see a list of all historical revisions (e.g., `cloudpdf-service--abc1234`).
+  4. Click on any revision in the list to open its details panel. Under the **Container** tab, you will see the exact registry image URL, including the tag or digest it ran under.
+
+* **Using the Azure CLI (Cloud Shell)**:
+  Run this command to list all revisions, their creation times, and active statuses:
+  ```bash
+  az containerapp revision list \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --output table
+  ```
+
+---
+
+#### **2. How to switch (roll back) between different versions**
+
+You can switch traffic between existing revisions in two ways, depending on how your Container App is configured.
+
+##### **Method A: Using the Azure Portal**
+1. Navigate to **Revision management** inside your Container App.
+2. Ensure your **Revision mode** is set to **Multiple** (which allows keeping older container revisions alive).
+3. In the revisions table, you will see a **Traffic (%)** column.
+4. Modify the traffic weights:
+   * Locate the old, working revision and set its traffic weight to **100%**.
+   * Locate the buggy revision and set its traffic weight to **0%**.
+5. Click **Save** at the top. The load balancer instantly shifts 100% of network traffic to the old version.
+
+##### **Method B: Using the Azure CLI**
+You can instantly change traffic routing to an older revision using a single command:
+
+```bash
+# Shift 100% of traffic to a specific past revision name
+az containerapp ingress traffic set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --revision-weight "cloudpdf-service--oldrevisionname=100"
+```
+
+If you are in **Single Revision Mode** (where only one container runs at a time), you switch versions by pointing the app to the older image tag or digest directly:
+```bash
+az containerapp update \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --image ${ACR_NAME}.azurecr.io/cloudpdf-processor:v1
+```
+
+
+
 
 
 
