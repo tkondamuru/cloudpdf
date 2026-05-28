@@ -21,9 +21,22 @@ This repository is designed to explore the different ways a containerized applic
 * **Mechanism**: Use the local [package-src.bat](package-src.bat) script to bundle C# files into a clean zip, upload it to Azure Cloud Shell, and run `az acr build`. Azure compiles the container in the cloud and registers it inside Azure Container Registry (ACR).
 
 ### 2. Automated Git-Ops (GitHub Actions CI/CD)
-* **Goal**: Shift from manual uploads to standard DevOps automation.
-* **Mechanism**: Merging a Pull Request into the `dev` branch triggers the GitHub workflow in [.github/workflows/deploy-dev.yml](.github/workflows/deploy-dev.yml). It logs in to Azure using a Service Principal, builds the container using ACR, tags it with the **Short Git Commit SHA**, and updates the Container App using a custom timestamp suffix.
-* **Deployment Details**: The workflow generates a short git SHA for the Docker image version, and computes a timestamp in the US Eastern Time Zone (EST/EDT) in the format `MMDDHHMMSS` (Month, Day, Hour, Minute, Second) using `TZ=America/New_York date +'%m%d%H%M%S'`. The timestamp is passed as the `--revision-suffix` parameter to create clean, chronologically traceable revision names like `cloudpdf-service--t0528004812`.
+We support two deployment environments using different Git-Ops branches and authentication models:
+
+* **Dev Environment**: Merging a Pull Request into the `dev` branch triggers [.github/workflows/deploy-dev.yml](.github/workflows/deploy-dev.yml). It connects to Azure using a traditional **Service Principal Secret** stored in GitHub Secrets.
+* **QA Environment**: Merging a Pull Request into the `qa` branch triggers [.github/workflows/deploy-qa.yml](.github/workflows/deploy-qa.yml). It connects using **OIDC Federated Credentials** (zero long-lived credentials stored in GitHub).
+
+Both environments compile code in the cloud via ACR Tasks, tag images using the **Short Git Commit SHA**, and deploy revisions using a custom timestamp suffix in the US Eastern Time Zone (EST/EDT) in the format `MMDDHHMMSS` (using `TZ=America/New_York date +'%m%d%H%M%S'`).
+
+#### OIDC vs. Traditional Service Principal Login
+
+| Feature | Dev Pipeline (Service Principal Password) | QA Pipeline (OIDC Federated Trust) |
+| :--- | :--- | :--- |
+| **Authentication** | GitHub uses a long-lived **Client Secret / Password** (stored in `AZURE_CREDENTIALS`). | GitHub performs a live cryptographic handshake with Azure using a **Federated Trust**. |
+| **Secret Expiry** | Secrets typically expire in 1–2 years, requiring manual rotation. | **Zero secrets**. Token is temporary and expires immediately after the job finishes. |
+| **Security Risk** | If your GitHub repo secrets are compromised, attackers obtain full access to deploy to your Azure resource group. | No secret exists to be stolen. Azure only trusts tokens requested by your specific GitHub repository and branch. |
+
+Refer to [docs/deployment-oidc.md](docs/deployment-oidc.md) for full configuration steps.
 
 ### 3. Traffic Splitting & Blue-Green Rollouts (Revisions)
 * **Goal**: Achieve zero-downtime updates and safe releases.
