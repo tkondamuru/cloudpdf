@@ -17,9 +17,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Get Short Git Commit SHA
+      - name: Get Short Git Commit SHA and Timestamp
         id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +'%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Log in to Azure
         uses: azure/login@v2
@@ -37,4 +39,5 @@ jobs:
           az containerapp update \
             --name cloudpdf-service \
             --resource-group pdf-processor-rg \
-            --image sat0049pdfregistry.azurecr.io/cloudpdf-processor:${{ steps.vars.outputs.sha_short }}
+            --image sat0049pdfregistry.azurecr.io/cloudpdf-processor:${{ steps.vars.outputs.sha_short }} \
+            --revision-suffix t${{ steps.vars.outputs.timestamp }}
