@@ -323,6 +323,142 @@ Azure Container Apps registers this specific image URL in the App's **Revision**
    * Rollbacks are clean and easy.
    * Azure Container Apps instantly detects the new version and pulls it without cache issues.
 
+---
+
+### **Q12: If an Azure account has access to multiple subscriptions, how do we determine which Subscription ID to target when configuring the Service Principal, and how do we ensure the Azure CLI is set to the correct active subscription?**
+
+**Answer:**
+
+You must select and target the specific Azure subscription **that hosts the Resource Group (`pdf-processor-rg`)** containing your project infrastructure (Container Registry, Environment, and Container App). 
+
+If you create the Service Principal under the wrong subscription, the GitHub Actions deployment will fail with a "Resource Group Not Found" or "Authorization Failed" error.
+
+#### **How to find and switch to the correct subscription in Azure Cloud Shell:**
+
+1. **List all subscriptions you have access to**:
+   ```bash
+   az account list --output table
+   ```
+   This will display a table containing the `Name`, `SubscriptionId`, and whether it is currently active (`IsDefault`).
+
+2. **Select and switch the active subscription**:
+   Identify the subscription name or ID where your resources are located, and set it as the default:
+   ```bash
+   # Switch using the subscription name
+   az account set --subscription "My-Project-Subscription"
+
+   # OR switch using the Subscription ID directly
+   az account set --subscription "12345678-abcd-1234-abcd-1234567890ab"
+   ```
+
+3. **Verify the change**:
+   Run the show command to confirm that the active subscription has updated:
+   ```bash
+   az account show --query "{Name:name, ID:id}"
+   ```
+
+Once you have verified that the active subscription context is correct, you can run the Service Principal creation command. The `az account show --query id` variable will automatically capture the correct ID, and the Service Principal will be granted permissions on the correct subscription.
+
+---
+
+### **Q13: In the Azure Portal, what is the quickest way to check what image versions/tags a container has run under, and how do we switch (roll back) between different versions using the Portal vs the Azure CLI?**
+
+**Answer:**
+
+In Azure Container Apps, every deployment, image change, or configuration update creates a **Revision** (an immutable historical snapshot). Revisions are how we inspect past versions and switch between them.
+
+#### **1. How to check past versions (Tags/Images)**
+
+* **Using the Azure Portal (Visual UI)**:
+  1. Open your **Container App** in the portal.
+  2. In the left-hand menu, under the **Application** section, click on **Revision management**.
+  3. You will see a list of all historical revisions (e.g., `cloudpdf-service--abc1234`).
+  4. Click on any revision in the list to open its details panel. Under the **Container** tab, you will see the exact registry image URL, including the tag or digest it ran under.
+
+* **Using the Azure CLI (Cloud Shell)**:
+  Run this command to list all revisions, their creation times, and active statuses:
+  ```bash
+  az containerapp revision list \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --output table
+  ```
+
+---
+
+#### **2. How to switch (roll back) between different versions**
+
+You can switch traffic between existing revisions in two ways, depending on how your Container App is configured.
+
+##### **Method A: Using the Azure Portal**
+1. Navigate to **Revision management** inside your Container App.
+2. Ensure your **Revision mode** is set to **Multiple** (which allows keeping older container revisions alive).
+3. In the revisions table, you will see a **Traffic (%)** column.
+4. Modify the traffic weights:
+   * Locate the old, working revision and set its traffic weight to **100%**.
+   * Locate the buggy revision and set its traffic weight to **0%**.
+5. Click **Save** at the top. The load balancer instantly shifts 100% of network traffic to the old version.
+
+##### **Method B: Using the Azure CLI**
+You can instantly change traffic routing to an older revision using a single command:
+
+```bash
+# Shift 100% of traffic to a specific past revision name
+az containerapp ingress traffic set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --revision-weight "cloudpdf-service--oldrevisionname=100"
+```
+
+If you are in **Single Revision Mode** (where only one container runs at a time), you switch versions by pointing the app to the older image tag or digest directly:
+```bash
+az containerapp update \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --image ${ACR_NAME}.azurecr.io/cloudpdf-processor:v1
+```
+
+---
+
+### **Q14: How are the revision suffixes (like `cloudpdf-service--nyjabj4` vs. `cloudpdf-service--0000001`) generated in Azure Container Apps, and can we customize them?**
+
+**Answer:**
+
+Azure Container Apps constructs Revision names using the format: `<container-app-name>--<suffix>`. The suffix is generated in two different ways depending on how the update was triggered:
+
+#### **1. Random Alphanumeric Suffix (e.g. `nyjabj4`)**
+* **Trigger**: Generated when you run a direct Azure CLI update (like `az containerapp update`) or modify settings manually in the Azure Portal without specifying a custom suffix.
+* **Mechanism**: Azure's server-side platform generates a random 7-character alphanumeric string. This guarantees that the revision name is unique and does not collide with any past configurations.
+
+#### **2. Sequential Suffix (e.g. `0000001`, `0000002`)**
+* **Trigger**: Commonly generated when you deploy updates using declarative templates (like ARM/Bicep, Terraform, or CI/CD pipelines using actions like `azure/containerapps-deploy-action`).
+* **Mechanism**: The deployment engine keeps track of the active version numbers and appends an auto-incremented, 7-digit numeric string starting at `0000001` for the first release, `0000002` for the second, and so on.
+
+---
+
+#### **Can we customize the revision suffix?**
+**Yes.** You can explicitly control the revision suffix to make it meaningful (e.g., matching the Git commit SHA or build ID). 
+
+* **Via Azure CLI**: Pass the `--revision-suffix` parameter:
+  ```bash
+  az containerapp update \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --image ${ACR_NAME}.azurecr.io/cloudpdf-processor:v1 \
+    --revision-suffix "v1-0-3"
+  ```
+  This creates a revision named: `cloudpdf-service--v1-0-3`.
+
+* **Via GitHub Actions**: If you are deploying using the Container Apps Deploy action, you can map the suffix to your short commit ID inside the YAML configuration:
+  ```yaml
+  with:
+    revisionSuffix: ${{ steps.vars.outputs.sha_short }}
+  ```
+  This results in a clean, traceable revision name: `cloudpdf-service--16a12a2`.
+
+
+
+
 
 
 
