@@ -44,3 +44,11 @@ Refer to [docs/deployment-oidc.md](docs/deployment-oidc.md) for full configurati
   * Shift 100% of network traffic instantly back to a previous safe revision in the event of a bug.
   * Split traffic manually (e.g. 95% to the stable version, 5% to the new release/canary) to run live testing before full rollout.
   * Use immutable cryptographic **Digests** (`@sha256:...`) to target and pull specific overwritten or untagged container builds.
+
+---
+
+## 📚 Additional Resources
+
+For deep-dives into specific Azure infrastructure and operations, refer to our compiled Q&A resources:
+* [Azure Container Registry & Packaging Q&A](docs/qa-acr.md): Details on file inclusion/exclusion for container builds, ACR costs, image tags vs. digests, retrieving overwritten manifests, registry security, and multiple subscriptions.
+* [Azure Container Apps, Environments & Revisions Q&A](docs/qa-container-apps.md): Architectural guide covering Container App Environments, service discovery, port mappings, rolling updates (Blue-Green), revision suffixes, and rollback operations.
