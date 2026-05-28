@@ -155,34 +155,51 @@ This will print a table showing revision names like `cloudpdf-service--t05280504
 How you rollback depends on your Container App's **Revision Mode** (Single vs. Multiple).
 
 #### **Option A: If in Single Revision Mode (Default)**
-In Single Revision Mode, only one container configuration can be active at a time. To rollback to a previous version, you update the Container App's image target back to your older working tag (or specific cryptographic Digest). This spins up a new revision running the older code and automatically shuts down the buggy one:
+In Single Revision Mode, only one container configuration can be active at a time. You can roll back using either the Azure Portal or the Azure CLI:
 
-```bash
-# Roll back by pointing the Container App back to the previous tag or digest
-az containerapp update \
-  --name cloudpdf-service \
-  --resource-group pdf-processor-rg \
-  --image sat0049pdfregistry.azurecr.io/cloudpdf-processor:v1
-```
+* **Method 1: Using the Azure Portal (easiest)**:
+  1. Navigate to **Revision management** inside your Container App.
+  2. In the revisions table, locate the previous working revision (e.g. `cloudpdf-service--0000001`) which is currently marked as **Inactive** (`Active = False`).
+  3. Click on the checkbox or row for that revision.
+  4. Click **Activate** in the top toolbar. 
+  5. Azure will automatically set this older revision to Active, route 100% of traffic to it, and deactivate your buggy one.
+
+* **Method 2: Using the Azure CLI**:
+  If you don't have the Portal open, update the Container App to run the previous image tag or digest. This automatically deactivates the buggy revision and provisions a new revision running the old image:
+  ```bash
+  az containerapp update \
+    --name cloudpdf-service \
+    --resource-group pdf-processor-rg \
+    --image sat0049pdfregistry.azurecr.io/cloudpdf-processor:v1
+  ```
 
 #### **Option B: If in Multiple Revision Mode**
 If you want to keep multiple historical container revisions alive and route traffic between them instantly without creating new deployments:
 
-1. **Set the App Revision Mode to Multiple**:
-   ```bash
-   az containerapp revision set-mode \
-     --name cloudpdf-service \
-     --resource-group pdf-processor-rg \
-     --mode multiple
-   ```
+You can switch traffic between revisions using either the Azure Portal or the Azure CLI:
 
-2. **Direct 100% of network traffic back to your older revision name**:
-   ```bash
-   az containerapp ingress traffic set \
-     --name cloudpdf-service \
-     --resource-group pdf-processor-rg \
-     --revision-weight "cloudpdf-service--0000001=100"
-   ```
+* **Method 1: Using the Azure Portal**:
+  1. Navigate to **Revision management** inside your Container App.
+  2. If the older revision is currently marked as **Inactive**, select it and click **Activate** in the toolbar.
+  3. Under the **Traffic allocation** or **Traffic weight** column/section (or by clicking **Edit and deploy** / **Manage traffic** depending on your UI version), adjust the percentage values (e.g., set your target revision to `100` and the buggy revision to `0`).
+  4. Click **Save** (or **Apply**) to route the traffic instantly.
+
+* **Method 2: Using the Azure CLI**:
+  1. **Set the App Revision Mode to Multiple**:
+     ```bash
+     az containerapp revision set-mode \
+       --name cloudpdf-service \
+       --resource-group pdf-processor-rg \
+       --mode multiple
+     ```
+
+  2. **Direct 100% of network traffic back to your older revision name**:
+     ```bash
+     az containerapp ingress traffic set \
+       --name cloudpdf-service \
+       --resource-group pdf-processor-rg \
+       --revision-weight "cloudpdf-service--0000001=100"
+     ```
 
 
 
