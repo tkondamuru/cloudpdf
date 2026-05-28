@@ -23,7 +23,7 @@ This repository is designed to explore the different ways a containerized applic
 ### 2. Automated Git-Ops (GitHub Actions CI/CD)
 * **Goal**: Shift from manual uploads to standard DevOps automation.
 * **Mechanism**: Merging a Pull Request into the `dev` branch triggers the GitHub workflow in [.github/workflows/deploy-dev.yml](.github/workflows/deploy-dev.yml). It logs in to Azure using a Service Principal, builds the container using ACR, tags it with the **Short Git Commit SHA**, and updates the Container App using a custom timestamp suffix.
-* **Deployment Details**: The workflow generates a short git SHA for the Docker image version, and computes a timestamp in the format `MMDDHHMMSS` (Month, Day, Hour, Minute, Second) using `date +'%m%d%H%M%S'`. The timestamp is passed as the `--revision-suffix` parameter to create clean, chronologically traceable revision names like `cloudpdf-service--t0528004812`.
+* **Deployment Details**: The workflow generates a short git SHA for the Docker image version, and computes a timestamp in the US Eastern Time Zone (EST/EDT) in the format `MMDDHHMMSS` (Month, Day, Hour, Minute, Second) using `TZ=America/New_York date +'%m%d%H%M%S'`. The timestamp is passed as the `--revision-suffix` parameter to create clean, chronologically traceable revision names like `cloudpdf-service--t0528004812`.
 
 ### 3. Traffic Splitting & Blue-Green Rollouts (Revisions)
 * **Goal**: Achieve zero-downtime updates and safe releases.

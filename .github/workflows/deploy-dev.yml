@@ -21,7 +21,7 @@ jobs:
         id: vars
         run: |
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "timestamp=$(date +'%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(TZ=America/New_York date +'%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Log in to Azure
         uses: azure/login@v2
