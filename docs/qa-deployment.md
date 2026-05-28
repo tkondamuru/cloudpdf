@@ -418,6 +418,45 @@ az containerapp update \
   --image ${ACR_NAME}.azurecr.io/cloudpdf-processor:v1
 ```
 
+---
+
+### **Q14: How are the revision suffixes (like `cloudpdf-service--nyjabj4` vs. `cloudpdf-service--0000001`) generated in Azure Container Apps, and can we customize them?**
+
+**Answer:**
+
+Azure Container Apps constructs Revision names using the format: `<container-app-name>--<suffix>`. The suffix is generated in two different ways depending on how the update was triggered:
+
+#### **1. Random Alphanumeric Suffix (e.g. `nyjabj4`)**
+* **Trigger**: Generated when you run a direct Azure CLI update (like `az containerapp update`) or modify settings manually in the Azure Portal without specifying a custom suffix.
+* **Mechanism**: Azure's server-side platform generates a random 7-character alphanumeric string. This guarantees that the revision name is unique and does not collide with any past configurations.
+
+#### **2. Sequential Suffix (e.g. `0000001`, `0000002`)**
+* **Trigger**: Commonly generated when you deploy updates using declarative templates (like ARM/Bicep, Terraform, or CI/CD pipelines using actions like `azure/containerapps-deploy-action`).
+* **Mechanism**: The deployment engine keeps track of the active version numbers and appends an auto-incremented, 7-digit numeric string starting at `0000001` for the first release, `0000002` for the second, and so on.
+
+---
+
+#### **Can we customize the revision suffix?**
+**Yes.** You can explicitly control the revision suffix to make it meaningful (e.g., matching the Git commit SHA or build ID). 
+
+* **Via Azure CLI**: Pass the `--revision-suffix` parameter:
+  ```bash
+  az containerapp update \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --image ${ACR_NAME}.azurecr.io/cloudpdf-processor:v1 \
+    --revision-suffix "v1-0-3"
+  ```
+  This creates a revision named: `cloudpdf-service--v1-0-3`.
+
+* **Via GitHub Actions**: If you are deploying using the Container Apps Deploy action, you can map the suffix to your short commit ID inside the YAML configuration:
+  ```yaml
+  with:
+    revisionSuffix: ${{ steps.vars.outputs.sha_short }}
+  ```
+  This results in a clean, traceable revision name: `cloudpdf-service--16a12a2`.
+
+
 
 
 
