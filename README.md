@@ -52,3 +52,4 @@ Refer to [docs/deployment-oidc.md](docs/deployment-oidc.md) for full configurati
 For deep-dives into specific Azure infrastructure and operations, refer to our compiled Q&A resources:
 * [Azure Container Registry & Packaging Q&A](docs/qa-acr.md): Details on file inclusion/exclusion for container builds, ACR costs, image tags vs. digests, retrieving overwritten manifests, registry security, and multiple subscriptions.
 * [Azure Container Apps, Environments & Revisions Q&A](docs/qa-container-apps.md): Architectural guide covering Container App Environments, service discovery, port mappings, rolling updates (Blue-Green), revision suffixes, and rollback operations.
+* [GitHub Actions Workflow Triggers: Push vs. Pull Request](docs/workflow-triggers.md): Structural and security breakdown explaining why OIDC requires `on: push` scoping, how it compares to standard PR triggers, and how to restrict deployments using GitHub Branch Protection.
