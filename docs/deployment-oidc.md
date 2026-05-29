@@ -24,6 +24,14 @@ Run these commands in Azure Cloud Shell to register the federated credential on 
 RESOURCE_GROUP="pdf-processor-rg"
 APP_NAME="cloudpdf-github-actions" # The name of your existing Service Principal
 
+# Create the Service Principal scoped to your Resource Group.
+az ad sp create-for-rbac \
+  --name "$APP_NAME" \
+  --role contributor \
+  --scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP \
+  --sdk-auth
+```
+
 # Get your Subscription ID and Tenant ID
 SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 TENANT_ID=$(az account show --query tenantId --output tsv)
@@ -57,6 +65,11 @@ az ad app federated-credential create \
   --id $APPLICATION_OBJECT_ID \
   --parameters @credential-qa-branch.json
 ```
+
+> [!TIP]
+> If you uploaded the JSON file using the Cloud Shell upload button, it will land in your home directory `/home/tejasvi`. If your terminal is working in another directory (like `cloudpdf-src`), you can:
+> * Reference it by its absolute path: `--parameters @/home/tejasvi/credential-qa-branch.json`
+> * Or copy it to your current working directory first: `cp /home/tejasvi/credential-qa-branch.json .` and run the command as shown above.
 
 ---
 
