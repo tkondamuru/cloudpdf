@@ -1,16 +1,12 @@
 name: Deploy to QA Environment (OIDC Federated)
 
 on:
-  pull_request:
+  push:
     branches:
       - qa
-    types:
-      - closed
 
 jobs:
   deploy:
-    # Only execute if the pull request was successfully merged (not just closed)
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     # Required permissions for requesting the OIDC JWT token
